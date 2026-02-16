@@ -1,4 +1,7 @@
+background.wav
 bucket.png
+button.wav
+collision.wav
 default.fnt
 default.png
 droplet.png
