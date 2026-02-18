@@ -8,63 +8,55 @@ import io.github.team6.entities.behavior.CollisionBehavior;
 import io.github.team6.entities.behavior.MovementBehavior;
 
 /**
- * NonPlayableEntity represents objects controlled by the Computer
+ * Class: NonPlayableEntity
+ * Represents objects controlled by the computer (AI, obstacles, projectiles).
+ * OOP Concept: Composition over Inheritance.
+ * Instead of extending "MovingEnemy" or "StationaryEnemy", this class uses Composition.
+ * It "HAS-A" MovementBehavior and "HAS-A" CollisionBehavior. This allows us to 
+ * mix and match behaviors to create unique enemies without creating new classes.
  */
 public class NonPlayableEntity extends Entity{
     
-    public enum DropletType {
-        CHASING,
-        STATIONARY,
-        PERMANENT_STATIONARY
-    }
 
     private Texture tex;
+
+    // Strategy Interfaces: These hold the specific logic for this instance.
     private MovementBehavior movementBehavior;
     private CollisionBehavior collisionBehavior;
     private Entity target;
-    private DropletType dropletType;
 
     // Constructors
     public NonPlayableEntity() {
+        super();
     }
 
-    public NonPlayableEntity(String fileName, float x, float y, float speed, float width, float height) {
-        super(x, y, speed, width, height);
+    // Basic Constructor
+    public NonPlayableEntity(String fileName, float x, float y, float speed, float width, float height, String tag) {
+        super(x, y, speed, width, height, tag);
         this.tex = new Texture(Gdx.files.internal(fileName));
     }
 
-    public NonPlayableEntity(String fileName, float x, float y, float speed, float width, float height,
-            MovementBehavior movementBehavior, CollisionBehavior collisionBehavior, Entity target, DropletType dropletType) {
-        this(fileName, x, y, speed, width, height);
+    // Full Constructor: Performs Dependency Injection for behaviors.    
+    public NonPlayableEntity(String fileName, float x, float y, float speed, float width, float height, String tag,
+            MovementBehavior movementBehavior, CollisionBehavior collisionBehavior, Entity target) {
+        this(fileName, x, y, speed, width, height, tag);
         this.movementBehavior = movementBehavior;
         this.collisionBehavior = collisionBehavior;
         this.target = target;
-        this.dropletType = dropletType;
     }
 
-    // getter
-    // public Texture getTexture() { return tex; }
-
-    //setter
-    // public void setTexture(Texture tex) { this.tex = tex; }
-
-    public DropletType getDropletType() {
-        return dropletType;
-    }
 
     @Override
     public void draw(SpriteBatch batch) {
-        batch.draw(tex, getX(), getY());
+        if (tex != null) batch.draw(tex, getX(), getY());
     }
 
     /**
-     * movement() defines the non playable entity behavior.
-     * Unlike PlayableEntity (which is empty here), this has logic.
+     * movement()
+     * Delegates the movement logic to the assigned MovementBehavior strategy.
      */
     @Override
     public void movement() {
-        //setY(getY() - getSpeed());  //AI movement
-        //if (getY() < 0) setY(480);
         if (movementBehavior != null) {
             movementBehavior.move(this, target);
         }
@@ -72,7 +64,7 @@ public class NonPlayableEntity extends Entity{
 
     @Override
     public void onCollision(Entity other) {
-        /// implement post collision logic
+        // Delegates collision logic to the assigned CollisionBehavior strategy.
         if (collisionBehavior != null) {
             collisionBehavior.onCollision(this, other);
         }

@@ -1,33 +1,29 @@
 package io.github.team6.entities.behavior;
 
 import io.github.team6.entities.Entity;
-import io.github.team6.entities.NonPlayableEntity;
 
 
 /**
  * Implements: CollisionBehavior
- * This defines the specific reaction of "Resetting to start" when hit.
- * Used By: PlayableEntity (The Bucket)
- * * This allows us to swap behaviors easily.
+ * Resets the entity to the starting position (0,0) if it hits a specific hazard.
+ * Used By: PlayableEntity
+ * OOP Concept: Open/Closed Principle (OCP).
+ * By using Tags ("ENEMY", "HAZARD") instead of 'instanceof' checks, this class 
+ * is Open for extension, we can add new hazard types, but Closed for modification
+ * (we don't need to change this code to handle new types).
  */
 public class ResetOnTouchBehavior implements CollisionBehavior {
 
-    /**
-     * @param self  The entity that owns this behavior (The Player)
-     * @param other The entity that was hit (The Droplet)
-     */
     @Override
     public void onCollision(Entity self, Entity other) {
-        // Only reset if we hit an Enemy (NonPlayableEntity).
-        if (other instanceof NonPlayableEntity) {
-            System.out.println("Hit enemy! Resetting position.");
+        // We identify the 'type' of the other object using a String tag.
+        // This decouples the logic from specific Java classes.
+        if (other.getTag().equals("ENEMY") || other.getTag().equals("HAZARD")) {
+            System.out.println("Hit Hazard! Resetting position.");
 
             // Execute the reset logic
             self.setX(0);
             self.setY(0);
-            
-            // Note: Sound is currently handled in PlayableEntity. 
-            // Ideally, sound logic would also move here, but let's keep it simple for now.
         }
     }
 }

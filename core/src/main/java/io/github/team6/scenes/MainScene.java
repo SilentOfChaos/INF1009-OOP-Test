@@ -9,20 +9,28 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
+import io.github.team6.entities.Entity;
 import io.github.team6.entities.NonPlayableEntity;
-import io.github.team6.entities.NonPlayableEntity.DropletType;
 import io.github.team6.entities.PlayableEntity;
 import io.github.team6.entities.behavior.ChasingMovementBehavior;
 import io.github.team6.entities.behavior.PermanentCollisionBehavior;
+import io.github.team6.entities.behavior.ResetOnTouchBehavior;
 import io.github.team6.entities.behavior.StationaryMovementBehavior;
 import io.github.team6.inputoutput.MusicSource;
 import io.github.team6.managers.SceneManager;
 
+
+/**
+ * Class: MainScene
+ * The core Gameplay State.
+ * Logic: Orchestrates the Game Loop (Input -> Update -> Collision -> Render).
+ */
 public class MainScene extends Scene {
 
     private final SceneManager scenes;
-    private BitmapFont font;
+    private BitmapFont font; // Used for drawing UI text (Score)
 
+    // Game State Data
     private float timeSurvived;
     private int score;
 
@@ -30,6 +38,7 @@ public class MainScene extends Scene {
         this.scenes = scenes;
     }
     
+    // Constants for configuration
     private static final int PERMANENT_STATIONARY_COUNT = 2;
     private static final int CHASING_COUNT = 2;
 
@@ -39,27 +48,39 @@ public class MainScene extends Scene {
     private static final float CHASING_DROPLET_HEIGHT = 30f;
     private static final float CHASING_DROPLET_SPEED = 0.5f;
 
-    //private SpriteBatch batch;
+    // Entity References
     private PlayableEntity bucket;
-    private List<NonPlayableEntity> permanentObstacles;
+    private List<Entity> permanentObstacles;
 
+
+    /**
+     * onEnter()
+     * Setup: Creates the Player (Bucket) and Enemies (Droplets).
+     * Demonstrates: Constructor Injection for Entities.
+     */
     @Override
     public void onEnter() {
         System.out.println("Entering Main Scene...");
         font = new BitmapFont(); 
 
-        // Create the entities
-        //PlayableEntity bucket = new PlayableEntity("bucket.png", 100, 220, 5, 50, 50);
-        //NonPlayableEntity droplet = new NonPlayableEntity("droplet.png", 250, 220, 5, 50, 50);
+        // 1. Create Player Entity
+        // Inject dependencies (Texture, Sound, Behavior) here.
+        bucket = new PlayableEntity(
+            "bucket.png",          // Texture
+            "collision.wav",       // Sound
+            outputManager,         // Audio Manager
+            new ResetOnTouchBehavior(), // Reset position on hit
+            100, 220, 5, 50, 50, "PLAYER"   
+        );
+        bucket.setOutputManager(outputManager); 
 
-        // Add them to the EntityManager (inherited from Scene class)
-        bucket = new PlayableEntity("bucket.png", 100, 220, 5, 50, 50);
-        bucket.setOutputManager(outputManager); // Set OutputManager to enable collision sound
+        // 2. Register with EntityManager so it gets updated/drawn
         entityManager.addEntity(bucket);
         entityManager.addPlayableEntity(bucket);
         //entityManager.addEntity(droplet);
         permanentObstacles = new ArrayList<>();
 
+        // 3. Factory Logic: Create Obstacles
         for (int i = 0; i < PERMANENT_STATIONARY_COUNT; i++) {
             NonPlayableEntity permanentStationaryDroplet = createPermanentStationaryDroplet();
             entityManager.addEntity(permanentStationaryDroplet);
@@ -70,11 +91,11 @@ public class MainScene extends Scene {
             entityManager.addEntity(createChasingDroplet());
         }
 
-        // bgm for game
+        // 4. Start Background Music
         try {
             MusicSource gameBgm = new MusicSource("background.wav");
             outputManager.setBgm(gameBgm);
-            outputManager.playBgm(true); // true = loop
+            outputManager.playBgm(true); 
             System.out.println("[DEBUG] Game background.wav loaded and playing");
         } catch (Exception e) {
             System.out.println("[DEBUG] Warning: background.wav not found. Background music disabled.");
@@ -82,6 +103,11 @@ public class MainScene extends Scene {
         }
     }
 
+    /**
+     * update()
+     * The Main Game Loop Logic.
+     * Order of Operations: Input -> Move -> Collide -> Cleanup.
+     */
     @Override
     public void update(float dt) {
         // Press ESC to go back to main menu
@@ -101,26 +127,29 @@ public class MainScene extends Scene {
         
     }
 
+    // Helper Factory Method to create a specific type of enemy
     private NonPlayableEntity createPermanentStationaryDroplet() {
         float[] position = getSafeSpawnPosition(PERMANENT_DROPLET_WIDTH, PERMANENT_DROPLET_HEIGHT);
+        // PHASE 1 CHANGE: Pass "ENEMY" (or "OBSTACLE") tag. Removed DropletType.
         return new NonPlayableEntity(
-                "droplet.png", position[0], position[1], 0, PERMANENT_DROPLET_WIDTH, PERMANENT_DROPLET_HEIGHT,
+                "droplet.png", position[0], position[1], 0, PERMANENT_DROPLET_WIDTH, PERMANENT_DROPLET_HEIGHT, "ENEMY",
                 new StationaryMovementBehavior(),
                 new PermanentCollisionBehavior(),
-                bucket,
-                DropletType.PERMANENT_STATIONARY);
+                bucket);
     }
 
+    // Helper Factory Method to create a Chasing Enemy
     private NonPlayableEntity createChasingDroplet() {
         float[] position = getSafeSpawnPosition(CHASING_DROPLET_WIDTH, CHASING_DROPLET_HEIGHT);
+        // PHASE 1 CHANGE: Pass "ENEMY" tag. Removed DropletType.
         return new NonPlayableEntity(
-                "droplet.png", position[0], position[1], CHASING_DROPLET_SPEED, CHASING_DROPLET_WIDTH, CHASING_DROPLET_HEIGHT,
+                "droplet.png", position[0], position[1], CHASING_DROPLET_SPEED, CHASING_DROPLET_WIDTH, CHASING_DROPLET_HEIGHT, "ENEMY",
                 new ChasingMovementBehavior(permanentObstacles),
                 new PermanentCollisionBehavior(),
-                bucket,
-                DropletType.CHASING);
+                bucket);
     }
 
+    // Algorithm to find a spawn point that isn't colliding with the player
     private float[] getSafeSpawnPosition(float width, float height) {
         float maxX = Math.max(0, Gdx.graphics.getWidth() - width);
         float maxY = Math.max(0, Gdx.graphics.getHeight() - height);
@@ -145,6 +174,8 @@ public class MainScene extends Scene {
     @Override
     public void render(SpriteBatch batch) {
         batch.begin();
+
+        // UI Rendering
         font.draw(batch, "Arrow Keys to move", 40, Gdx.graphics.getHeight() - 40);
         font.draw(batch, "ESC to return to menu", 40, Gdx.graphics.getHeight() - 80);
         entityManager.drawEntity(batch);
